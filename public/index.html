@@ -1,2 +1,67 @@
-<h1>Physics Calculator</h1>
-<p>ยินดีต้อนรับสู่โปรเจกต์ฟิสิกส์บน Node.js</p>
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Physics Calculator</title>
+</head>
+<body>
+    <h1 style="color: red;">CHECK UPDATE</h1>
+    <h1>คำนวณพื้นที่วงกลม</h1>
+    
+    <input type="number" id="radiusInput" placeholder="ใส่รัศมีตรงนี้">
+    <button onclick="sendData()">คำนวณเลย!</button>
+    
+    <h2 id="resultDisplay">ผลลัพธ์จะปรากฏที่นี่</h2>
+
+    <button onclick="getHistory()">ดูประวัติการคำนวณ</button>
+    <div id="historyDisplay"></div>
+
+    <script>
+        async function sendData() {
+            const input = document.getElementById('radiusInput');
+            const r = input.value;
+            const display = document.getElementById('resultDisplay');
+
+            // 1. ดัก Error: ถ้าค่าว่าง หรือ น้อยกว่าหรือเท่ากับ 0
+            if (r === "" || r <= 0) {
+                display.style.color = "red"; // เปลี่ยนตัวอักษรเป็นสีแดง
+                display.innerText = "❌ กรุณาใส่ตัวเลขที่มากกว่า 0 ครับ";
+                input.focus(); // ให้เคอร์เซอร์ไปกระพริบที่ช่องกรอก
+                return; // สั่งหยุดการทำงานทันที ไม่ให้ส่ง Fetch ไปหลังบ้าน
+            }
+
+            // ถ้าผ่านเงื่อนไขด้านบนมาได้ ถึงจะเริ่มทำงานส่วนนี้
+            display.style.color = "black";
+            display.innerText = "กำลังคำนวณ...";
+
+            try {
+                const response = await fetch('/api/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ radius: parseFloat(r) })
+                });
+
+                const data = await response.json();
+                display.innerText = `พื้นที่วงกลมคือ: ${data.result.toFixed(2)}`;
+            } catch (error) {
+                display.innerText = "เกิดข้อผิดพลาดในการเชื่อมต่อกับ Server";
+            }
+        }
+        async function getHistory() {
+            const response = await fetch('/api/history');
+            const logs = await response.json();
+            
+            let html = "<ul>";
+            logs.forEach(log => {
+                html += `<li>รัศมี: ${log.radius} | พื้นที่: ${log.result.toFixed(2)} (${new Date(log.createdAt).toLocaleString()})</li>`;
+            });
+            html += "</ul>";
+            
+            document.getElementById('historyDisplay').innerHTML = html;
+        }
+        
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # ส่วนของฐานข้อมูล
+  mongodb:
+    image: mongo:latest
+    container_name: physics-db
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password123
+    volumes:
+      - mongo-data:/data/db # เก็บข้อมูลไว้ในเครื่อง แม้ลบ Container ข้อมูลก็ไม่หาย
+
+  # ส่วนของแอป Node.js
+  app:
+    build: . # สั่งให้ Build จาก Dockerfile ในโฟลเดอร์นี้
+    container_name: physics-app
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017/physics_db?authSource=admin
+    depends_on:
+      - mongodb # บอกว่าให้รันฐานข้อมูลให้เสร็จก่อนค่อยรันแอป
+
+volumes:
+  mongo-data: # สร้างพื้นที่เก็บข้อมูลถาวร

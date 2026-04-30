@@ -1,8 +1,15 @@
 import express from 'express';
 import { calculateArea, PI } from './math.js'
+import mongoose from 'mongoose';
 
 const app = express();
 const port = 3000;
+const mongoURI = process.env.MONGO_URI || 'mongodb://admin:password123@localhost:27017/physics_db?authSource=admin';
+
+mongoose.connect(mongoURI)
+mongoose.connect(mongoURI)
+    .then(() => console.log('✅ Connected to MongoDB...'))
+    .catch(err => console.error('❌ Could not connect to MongoDB...', err));
 
 app.use(express.json());
 
@@ -57,6 +64,54 @@ app.post('/compute-physics', (req, res) => {
         message: `แรงที่ใช้คือ ${force} นิวตัน`
     });
 });
+
+app.post('/api/calculate', async (req, res) => {
+    const { radius } = req.body;
+
+    if (!radius || radius <= 0) {
+        return res.status(400).json({ error: "Invalid radius" });
+    }
+
+    const area = calculateArea(radius);
+
+    try {
+        // 3. บันทึกลง MongoDB
+        const newLog = new Log({
+            experiment: "Circle Area Calculation",
+            radius: radius,
+            result: area
+        });
+        
+        await newLog.save(); // บันทึกจริงลง DB
+
+        // 4. ส่งคำตอบกลับไปหน้าบ้าน
+        res.json({ result: area, status: "Saved to DB" });
+    } catch (error) {
+        res.status(500).json({ error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" });
+    }
+
+});
+
+//Logs/models
+const logSchema = new mongoose.Schema({
+    experiment: String,
+    radius: Number,
+    result: Number,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Log = mongoose.model('Log', logSchema);
+
+// ดึงข้อมูลทั้งหมดจาก MongoDB ออกมา
+app.get('/api/history', async (req, res) => {
+    try {
+        const history = await Log.find().sort({ createdAt: -1 }); // ดึงข้อมูลและเรียงจากใหม่ไปเก่า
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 // สั่งให้ Server เริ่มทำงาน
 app.listen(port, () => {
