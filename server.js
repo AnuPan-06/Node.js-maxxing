@@ -1,15 +1,34 @@
+import 'dotenv/config';
 import express from 'express';
 import { calculateArea, PI } from './math.js'
 import mongoose from 'mongoose';
 
 const app = express();
-const port = 3000;
-const mongoURI = process.env.MONGO_URI || 'mongodb://admin:password123@localhost:27017/physics_db?authSource=admin';
 
-mongoose.connect(mongoURI)
+const { MONGO_USER, MONGO_PASS, MONGO_HOST, MONGO_DB } = process.env;
+if (!MONGO_USER || !MONGO_PASS || !MONGO_HOST) {
+    console.error("❌ ขาดการตั้งค่า Environment Variables ในไฟล์ .env");
+    process.exit(1); 
+}
+const user = encodeURIComponent(MONGO_USER);
+const pass = encodeURIComponent(MONGO_PASS);
+const mongoURI = `mongodb://${user}:${pass}@${MONGO_HOST}:27017/${MONGO_DB}?authSource=admin`;
+
+//Logs/models
+const logSchema = new mongoose.Schema({
+    experiment: String,
+    radius: Number,
+    result: Number,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Log = mongoose.model('Log', logSchema);
+
 mongoose.connect(mongoURI)
     .then(() => console.log('✅ Connected to MongoDB...'))
     .catch(err => console.error('❌ Could not connect to MongoDB...', err));
+
+const PORT = process.env.PORT;
 
 app.use(express.json());
 
@@ -92,15 +111,7 @@ app.post('/api/calculate', async (req, res) => {
 
 });
 
-//Logs/models
-const logSchema = new mongoose.Schema({
-    experiment: String,
-    radius: Number,
-    result: Number,
-    createdAt: { type: Date, default: Date.now }
-});
 
-const Log = mongoose.model('Log', logSchema);
 
 // ดึงข้อมูลทั้งหมดจาก MongoDB ออกมา
 app.get('/api/history', async (req, res) => {
@@ -114,6 +125,6 @@ app.get('/api/history', async (req, res) => {
 
 
 // สั่งให้ Server เริ่มทำงาน
-app.listen(port, () => {
-    console.log(`🚀 Server กำลังรันอยู่ที่ http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log(`🚀 Server กำลังรันอยู่ที่ http://localhost:${PORT}`);
 });
