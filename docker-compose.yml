@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # ส่วนของฐานข้อมูล
+  
   mongodb:
     image: mongo:latest
     container_name: physics-db
@@ -11,18 +11,33 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
     volumes:
-      - mongo-data:/data/db # เก็บข้อมูลไว้ในเครื่อง แม้ลบ Container ข้อมูลก็ไม่หาย
+      - mongo-data:/data/db 
 
-  # ส่วนของแอป Node.js
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-container
+    ports:
+      - "3306:3306" 
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD} 
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    volumes:
+      - mysql_data:/var/lib/mysql
+
   app:
-    build: . # สั่งให้ Build จาก Dockerfile ในโฟลเดอร์นี้
+    build: . 
     container_name: physics-app
     ports:
       - "3000:3000"
     env_file:
       - .env
     depends_on:
-      - mongodb # บอกว่าให้รันฐานข้อมูลให้เสร็จก่อนค่อยรันแอป
+      - mongodb 
+      - mysql-db
+
+
 
 volumes:
-  mongo-data: # สร้างพื้นที่เก็บข้อมูลถาวร
+  mongo-data: 
+  mysql_data:
+    

@@ -71,18 +71,14 @@
             const r = input.value;
             const display = document.getElementById('resultDisplay');
 
-            // 1. ดัก Error: ถ้าค่าว่าง หรือ น้อยกว่าหรือเท่ากับ 0
             if (r === "" || r <= 0) {
-                display.classList.remove('bg-gray-50', 'text-gray-700', 'bg-green-50', 'text-green-700');
-                display.classList.add('bg-red-50', 'text-red-600');
+                display.className = "mt-4 p-4 rounded-xl bg-red-50 text-red-600 text-center font-semibold";
                 display.innerText = "❌ กรุณาใส่ตัวเลขที่มากกว่า 0 ครับ";
                 input.focus();
                 return;
             }
 
-            // แสดงสถานะกำลังโหลด
-            display.classList.remove('bg-red-50', 'text-red-600');
-            display.classList.add('bg-gray-50', 'text-gray-700');
+            display.className = "mt-4 p-4 rounded-xl bg-gray-50 text-gray-700 text-center font-semibold";
             display.innerText = "⏳ กำลังคำนวณ...";
 
             try {
@@ -94,14 +90,22 @@
 
                 const data = await response.json();
                 
-                display.classList.replace('bg-gray-50', 'bg-green-50');
-                display.classList.replace('text-gray-700', 'text-green-700');
-                display.innerHTML = `พื้นที่วงกลมคือ: <span class="text-2xl block font-bold">${data.result.toFixed(2)}</span>`;
+                // ตรวจสอบว่ามี Error ส่งมาจากหลังบ้านไหม
+                if (!response.ok || data.error) {
+                    display.className = "mt-4 p-4 rounded-xl bg-red-50 text-red-600 text-center font-semibold";
+                    display.innerText = `❌ หลังบ้านแจ้งว่า: ${data.error || 'เกิดข้อผิดพลาด'}`;
+                    return;
+                }
                 
-                // หลังจากคำนวณเสร็จ ให้ดึงประวัติใหม่ทันที
-                getHistory();
+                display.className = "mt-4 p-4 rounded-xl bg-green-50 text-green-700 text-center font-semibold";
+                display.innerHTML = `พื้นที่วงกลมคือ: <span class="text-2xl block font-bold">${Number(data.result).toFixed(2)}</span>`;
+                
+                getHistory(); // อัปเดตประวัติ
             } catch (error) {
-                display.innerText = "เกิดข้อผิดพลาดในการเชื่อมต่อกับ Server";
+                // หากพัง จะพ่นบอกเลยว่าพังที่โค้ดบรรทัดไหน หรือเน็ตหลุด
+                display.className = "mt-4 p-4 rounded-xl bg-red-50 text-red-600 text-center font-semibold";
+                display.innerText = `❌ ระบบหน้าบ้านพัง: ${error.message}`;
+                console.error("ดูลายแทงความพังตรงนี้:", error);
             }
         }
 
@@ -111,22 +115,27 @@
                 const logs = await response.json();
                 const historyDiv = document.getElementById('historyDisplay');
                 
-                if (logs.length === 0) {
+                if (!Array.isArray(logs) || logs.length === 0) {
                     historyDiv.innerHTML = '<p class="text-gray-400 text-center py-10">ยังไม่มีข้อมูลประวัติ</p>';
                     return;
                 }
 
                 let html = "";
                 logs.forEach(log => {
-                    const date = new Date(log.createdAt).toLocaleString('th-TH');
+                    // ดักเผื่อชื่อตัวแปรวันที่ใน MySQL เป็นตัวเล็กหรือตัวใหญ่
+                    const rawDate = log.createdAt || log.createdat || new Date();
+                    const date = new Date(rawDate).toLocaleString('th-TH');
+                    const radius = log.radius !== undefined ? log.radius : 'N/A';
+                    const result = log.result !== undefined ? Number(log.result).toFixed(2) : '0.00';
+
                     html += `
                         <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex justify-between items-center hover:shadow-md transition-shadow">
                             <div>
-                                <p class="text-xs text-gray-400 uppercase font-bold tracking-tight">รัศมี: ${log.radius}</p>
+                                <p class="text-xs text-gray-400 uppercase font-bold tracking-tight">รัศมี: ${radius}</p>
                                 <p class="text-[10px] text-gray-400">${date}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-lg font-black text-blue-600">${log.result.toFixed(2)}</p>
+                                <p class="text-lg font-black text-blue-600">${result}</p>
                                 <p class="text-[10px] text-gray-300">ตารางหน่วย</p>
                             </div>
                         </div>
@@ -139,7 +148,7 @@
             }
         }
 
-        // เรียกประวัติขึ้นมาโชว์ตั้งแต่ตอนโหลดหน้าเว็บ
+        // เรียกทำงานตอนโหลดหน้าเว็บ
         getHistory();
     </script>
 
